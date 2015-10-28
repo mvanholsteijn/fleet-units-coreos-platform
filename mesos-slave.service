@@ -1,0 +1,46 @@
+[Unit]
+Description=Mesos Master
+After=docker.service
+After=etcd.service
+After=fleet.service
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm %p
+
+ExecStartPre=/bin/sh -c \
+    "docker history tnolet/mesos-on-coreos >/dev/null || \
+    docker pull tnolet/mesos-on-coreos:1.0"
+
+ExecStartPre=/bin/sh -c \
+    "while [ -z "$(curl localhost:8500/v1/catalog/service/zookeeper | jq -r '.[0].ServiceAddress' 2> /dev/null)" ] ; do \
+         echo "Waiting for zookeeper to come online " >&2 ; sleep 5 ; \
+    done
+
+ExecStart=/bin/sh -c "exec /usr/bin/docker run \
+    --name=%p \
+    -h %H \
+    --expose 5051 \
+    -p $COREOS_PRIVATE_IPV4:5051:5051 \
+    -e SERVICE_5051_NAME=mesos-slave \
+    -e SERVICE_5051_TAGS=http \
+    -e MAIN_IP=$(ifconfig eth0 | grep 'inet ' awk '{print $2}') \
+    -e DOCKER0_IP=$(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
+    -v /var/lib/docker/btrfs/subvolumes:/var/lib/docker/btrfs/subvolumes \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    tnolet/mesos-on-coreos:1.0 \
+    slave \
+    --master=zk://$(curl localhost:8500/v1/catalog/service/zookeeper | \
+			    jq -r '.[0] | (.ServiceAddress  + ":" + (.ServicePort | tostring) )')/mesos/"
+	
+
+ExecStop=/usr/bin/docker stop %p
+SyslogIdentifier=%p
+SuccessExitStatus=1
+
+[X-Fleet]
+Global=true

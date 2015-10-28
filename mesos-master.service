@@ -1,0 +1,40 @@
+[Unit]
+Description=Mesos Master
+After=docker.service
+After=etcd.service
+After=fleet.service
+
+[Service]
+Restart=always
+TimeoutStartSec=180
+
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill %p
+ExecStartPre=-/usr/bin/docker rm %p
+
+ExecStartPre=/bin/sh -c \
+    "docker history tnolet/mesos-on-coreos:1.0 >/dev/null || \
+    docker pull tnolet/mesos-on-coreos:1.0"
+
+ExecStart=/bin/sh -c "exec /usr/bin/docker run \
+		--name=%p \
+		-h %H \
+		--expose 5050 \
+		--expose 2181 \
+                -p $COREOS_PRIVATE_IPV4:5050:5050 \
+                -p $COREOS_PRIVATE_IPV4:2181:2181 \
+		-e SERVICE_5050_NAME=mesos-master \
+		-e SERVICE_5050_TAGS=http \
+		-e SERVICE_2181=zookeeper \
+		-e SERVICE_2181_TAGS=http \
+                -e MAIN_IP=$(ifconfig eth0 | grep 'inet ' | awk '{print $2}') \
+                -e DOCKER0_IP=$(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
+                -v /var/lib/docker/btrfs/subvolumes:/var/lib/docker/btrfs/subvolumes \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                tnolet/mesos-on-coreos:1.0 \
+		master \
+		--etcd=false"
+
+ExecStop=/usr/bin/docker stop %p
+SyslogIdentifier=%p
+SuccessExitStatus=1
