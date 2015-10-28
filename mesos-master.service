@@ -6,35 +6,38 @@ After=fleet.service
 
 [Service]
 Restart=always
-TimeoutStartSec=180
+TimeoutStartSec=300
 
 EnvironmentFile=/etc/environment
-ExecStartPre=-/usr/bin/docker kill %p
-ExecStartPre=-/usr/bin/docker rm %p
+ExecStartPre=-/usr/bin/docker kill x-%p
+ExecStartPre=-/usr/bin/docker rm x-%p
 
 ExecStartPre=/bin/sh -c \
-    "docker history tnolet/mesos-on-coreos:1.0 >/dev/null || \
-    docker pull tnolet/mesos-on-coreos:1.0"
+    "docker history mesosphere/mesos-master:0.23.0-1.0.ubuntu1404 >/dev/null || \
+    docker pull mesosphere/mesos-master:0.23.0-1.0.ubuntu1404"
+
+ExecStartPre=/bin/sh -c \
+    "while [ -z "$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | jq -r '.[0].ServiceAddress' 2> /dev/null)" ] ; do \
+         echo "Waiting for zookeeper to come online " >&2 ; sleep 5 ; \
+    done
 
 ExecStart=/bin/sh -c "exec /usr/bin/docker run \
-		--name=%p \
-		-h %H \
-		--expose 5050 \
-		--expose 2181 \
-                -p $COREOS_PRIVATE_IPV4:5050:5050 \
-                -p $COREOS_PRIVATE_IPV4:2181:2181 \
-		-e SERVICE_5050_NAME=mesos-master \
-		-e SERVICE_5050_TAGS=http \
-		-e SERVICE_2181=zookeeper \
-		-e SERVICE_2181_TAGS=http \
-                -e MAIN_IP=$(ifconfig eth0 | grep 'inet ' | awk '{print $2}') \
-                -e DOCKER0_IP=$(ifconfig docker0 | grep 'inet ' | awk '{print $2}') \
-                -v /var/lib/docker/btrfs/subvolumes:/var/lib/docker/btrfs/subvolumes \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                tnolet/mesos-on-coreos:1.0 \
-		master \
-		--etcd=false"
+        --name x-mesos-master \
+        --net host \
+        --publish $COREOS_PRIVATE_IPV4:5050:5050 \
+        --env SERVICE_NAME=mesos \
+        --env SERVICE_TAGS=http \
+        --env MESOS_ZK=zk://$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | \
+                                 jq -r '.[0] | (.ServiceAddress + \":\" + (.ServicePort | tostring))')/mesos \
+        --env MESOS_IP=$COREOS_PRIVATE_IPV4 \
+        --env MESOS_PORT=5050 \
+        --env MESOS_LOG_DIR=/var/log/mesos \
+        --env MESOS_WORK_DIR=/var/lib/mesos \
+        --env MESOS_LOGGING_LEVEL=WARNING \
+        --env MESOS_QUIET=true \
+        --env MESOS_QUORUM=1 \
+        --env MESOS_CLUSTER=single-node-mesos \
+        mesosphere/mesos-master:0.23.0-1.0.ubuntu1404"
 
-ExecStop=/usr/bin/docker stop %p
+ExecStop=/usr/bin/docker stop x-%p
 SyslogIdentifier=%p
-SuccessExitStatus=1

@@ -26,8 +26,8 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
 	  -p $COREOS_PRIVATE_IPV4:8302:8302/udp \
 	  -p $COREOS_PRIVATE_IPV4:8400:8400 \
 	  -p $COREOS_PRIVATE_IPV4:8500:8500 \
-	  -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2;}'):53:8600/tcp \
-	  -p $(ifconfig docker0 | grep 'inet ' | awk '{print $2;}'):53:8600/udp \
+	  -p 0.0.0.0:53:8600/tcp \
+	  -p 0.0.0.0:53:8600/udp \
 	  -e SERVICE_8500_NAME=consul-ui \
 	  -e SERVICE_8500_TAGS=http \
 	  -v /var/run/docker.sock:/var/run/docker.sock \
