@@ -1,0 +1,32 @@
+[Unit]
+Description=Marathon
+After=docker.service
+After=etcd.service
+After=fleet.service
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/docker kill x-%p
+ExecStartPre=-/usr/bin/docker rm x-%p
+
+ExecStartPre=/bin/bash -c \
+    "docker history mesosphere/marathon:v0.10.0 >/dev/null || \
+    docker pull mesosphere/marathon:v0.10.0"
+
+ExecStart=/bin/bash -c "ZOOKEEPERS=$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | \
+                                 jq -r '.[0] | (\"zk://\" + .ServiceAddress + \":\" + (.ServicePort | tostring))') ;\
+    exec /usr/bin/docker run \
+        --name x-%p \
+        --publish $COREOS_PRIVATE_IPV4::8080 \
+        --env SERVICE_NAME=marathon \
+        --env SERVICE_TAGS=http \
+        mesosphere/marathon:v0.10.0  \
+        --master $ZOOKEEPERS/mesos \
+        --zk $ZOOKEEPERS/marathon \
+        --hostname %H"
+
+ExecStop=/usr/bin/docker stop x-%p
+SyslogIdentifier=%p
