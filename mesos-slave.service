@@ -5,6 +5,7 @@ After=etcd.service
 After=fleet.service
 After=consul-server.service
 After=zookeeper.service
+After=mesos-master.service
 
 [Service]
 Restart=always
