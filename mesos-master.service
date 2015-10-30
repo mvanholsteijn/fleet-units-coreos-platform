@@ -3,38 +3,36 @@ Description=Mesos Master
 After=docker.service
 After=etcd.service
 After=fleet.service
+After=consul-server.service
+After=zookeeper.service
 
 [Service]
 Restart=always
 TimeoutStartSec=300
+RestartSec=10
 
 EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill x-%p
 ExecStartPre=-/usr/bin/docker rm x-%p
 
-ExecStartPre=/bin/sh -c \
-    "docker history mesosphere/mesos-master:0.23.0-1.0.ubuntu1404 >/dev/null || \
-    docker pull mesosphere/mesos-master:0.23.0-1.0.ubuntu1404"
+ExecStartPre=/usr/bin/docker pull mesosphere/mesos-master:0.23.0-1.0.ubuntu1404
 
-ExecStartPre=/bin/sh -c \
-    "while [ -z "$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | jq -r '.[0].ServiceAddress' 2> /dev/null)" ] ; do \
-         echo "Waiting for zookeeper to come online " >&2 ; sleep 5 ; \
-    done
+# Test whether the zookeeper is up.
+ExecStartPre=/bin/sh -c "curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | jq -r -e .[0].ServiceAddress"
 
-ExecStart=/bin/sh -c "exec /usr/bin/docker run \
+ExecStart=/bin/sh -c "set -x ; exec /usr/bin/docker run \
         --name x-mesos-master \
-        --net host \
+	--net host \
         --publish $COREOS_PRIVATE_IPV4:5050:5050 \
         --env SERVICE_NAME=mesos \
         --env SERVICE_TAGS=http \
-        --env MESOS_ZK=zk://$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | \
+	--env SERVICE_5050_CHECK_HTTP=/ \
+	--env SERVICE_5050_CHECK_INTERVAL=15s \
+	--env SERVICE_5050_CHECK_TIMEOUT=2s  \
+        --env MESOS_ZK=zk://$(curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | \
                                  jq -r '.[0] | (.ServiceAddress + \":\" + (.ServicePort | tostring))')/mesos \
-        --env MESOS_IP=$COREOS_PRIVATE_IPV4 \
+        --env MESOS_ADVERTISE_IP=$COREOS_PRIVATE_IPV4 \
         --env MESOS_PORT=5050 \
-        --env MESOS_LOG_DIR=/var/log/mesos \
-        --env MESOS_WORK_DIR=/var/lib/mesos \
-        --env MESOS_LOGGING_LEVEL=WARNING \
-        --env MESOS_QUIET=true \
         --env MESOS_QUORUM=1 \
         --env MESOS_CLUSTER=single-node-mesos \
         mesosphere/mesos-master:0.23.0-1.0.ubuntu1404"

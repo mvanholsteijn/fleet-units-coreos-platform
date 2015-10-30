@@ -12,13 +12,14 @@ EnvironmentFile=/etc/environment
 ExecStartPre=-/usr/bin/docker kill %p
 ExecStartPre=-/usr/bin/docker rm %p
 
-ExecStartPre=/bin/bash -c \
-    "docker history cargonauts/zookeeper:0.0.1 >/dev/null || \
-    docker pull cargonauts/zookeeper:0.0.1"
+ExecStartPre=/usr/bin/docker pull cargonauts/zookeeper:0.0.1
 
-ExecStart=/bin/bash -c "exec /usr/bin/docker run \
+ExecStart=/usr/bin/docker run \
+        --name %p \
 	-p 0.0.0.0:2181:2181 \
-        cargonauts/zookeeper:0.0.1"
+	-p 0.0.0.0:2888:2888 \
+	-p 0.0.0.0:3888:3888 \
+        cargonauts/zookeeper:0.0.1
 
 ExecStop=/usr/bin/docker stop %p
 SyslogIdentifier=%p
