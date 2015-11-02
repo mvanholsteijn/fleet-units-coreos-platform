@@ -19,7 +19,7 @@ ExecStartPre=-/usr/bin/docker rm x-%p
 ExecStartPre=/usr/bin/docker pull mesosphere/mesos-slave:0.23.0-1.0.ubuntu1404
 
 # Test whether the zookeeper is up.
-ExecStartPre=/bin/sh -c "curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | jq -r -e .[0].ServiceAddress"
+ExecStartPre=/bin/sh -c "curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper?tag=zk | jq -r -e .[0].ServiceAddress"
 
 ExecStart=/bin/sh -c "exec /usr/bin/docker run \
         --name x-%p \
@@ -35,7 +35,7 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
         --volume /dev/log:/dev/log \
         --env SERVICE_NAME=mesos-slave \
         --env SERVICE_TAGS=http \
-        --env MESOS_MASTER=zk://$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper | \
+        --env MESOS_MASTER=zk://$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper?tag=zk | \
                                  jq -r '.[0] | (.ServiceAddress + \":\" + (.ServicePort | tostring))')/mesos \
         --env MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins \
         --env MESOS_ISOLATOR=cgroups/cpu,cgroups/mem \
