@@ -4,6 +4,8 @@ After=docker.service
 After=etcd.service
 After=fleet.service
 After=consul-server.service
+After=mesos-master.service
+After=mesos-slave.service
 After=zookeeper.service
 
 [Service]
