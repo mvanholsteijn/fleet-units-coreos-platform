@@ -25,8 +25,8 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
     --publish $COREOS_PRIVATE_IPV4:8302:8302/udp \
     --publish $COREOS_PRIVATE_IPV4:8400:8400 \
     --publish $COREOS_PRIVATE_IPV4:8500:8500 \
-    --publish $(ifconfig docker0 | awk '/inet /{print $2}'):53:8600/tcp \
-    --publish $(ifconfig docker0 | awk '/inet /{print $2}'):53:8600/udp \
+    --publish :53:8600/tcp \
+    --publish :53:8600/udp \
     --env SERVICE_8300_NAME=consul-server-rpc \
     --env SERVICE_8300_TAGS=consul-server-rpc \
     --env SERVICE_8301_NAME=consul-serf-lan \
