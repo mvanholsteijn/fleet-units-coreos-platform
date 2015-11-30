@@ -12,10 +12,11 @@ TimeoutStartSec=300
 RestartSec=10
 
 EnvironmentFile=/etc/environment
+Environment="REPOSITORY=mesoscloud/mesos-master:0.24.1-ubuntu-14.04"
 ExecStartPre=-/usr/bin/docker kill x-%p
 ExecStartPre=-/usr/bin/docker rm x-%p
 
-ExecStartPre=/usr/bin/docker pull mesosphere/mesos-master:0.23.0-1.0.ubuntu1404
+ExecStartPre=/usr/bin/docker pull ${REPOSITORY}
 
 # Test whether the zookeeper is up.
 ExecStartPre=/bin/sh -c "curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper?tag=zk | jq -r -e .[0].ServiceAddress"
@@ -35,7 +36,7 @@ ExecStart=/bin/sh -c "set -x ; exec /usr/bin/docker run \
         --env MESOS_PORT=5050 \
         --env MESOS_QUORUM=1 \
         --env MESOS_CLUSTER=single-node-mesos \
-        mesosphere/mesos-master:0.23.0-1.0.ubuntu1404"
+        ${REPOSITORY}"
 
 ExecStop=/usr/bin/docker stop x-%p
 SyslogIdentifier=%p

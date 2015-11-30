@@ -14,10 +14,11 @@ TimeoutStartSec=300
 RestartSec=10
 
 EnvironmentFile=/etc/environment
+Environment="REPOSITORY=mesosphere/marathon:v0.10.0"
 ExecStartPre=-/usr/bin/docker kill x-%p
 ExecStartPre=-/usr/bin/docker rm x-%p
 
-ExecStartPre=/usr/bin/docker pull mesosphere/marathon:v0.10.0
+ExecStartPre=/usr/bin/docker pull ${REPOSITORY}
 
 # Test whether the zookeeper is up.
 ExecStartPre=/bin/sh -c "curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper?tag=zk | jq -r -e .[0].ServiceAddress"
@@ -30,7 +31,7 @@ ExecStart=/bin/bash -c "ZOOKEEPERS=$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/s
         --publish $COREOS_PRIVATE_IPV4:8888:8888 \
         --env SERVICE_NAME=marathon \
         --env SERVICE_TAGS=http \
-        mesosphere/marathon:v0.10.0  \
+        ${REPOSITORY}  \
         --master $ZOOKEEPERS/mesos \
         --zk $ZOOKEEPERS/marathon \
         --http_port 8888"

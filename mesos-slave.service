@@ -13,10 +13,11 @@ TimeoutStartSec=300
 RestartSec=10
 
 EnvironmentFile=/etc/environment
+Environment="REPOSITORY=mesoscloud/mesos-slave:0.24.1-ubuntu-14.04"
 ExecStartPre=-/usr/bin/docker kill x-%p
 ExecStartPre=-/usr/bin/docker rm x-%p
 
-ExecStartPre=/usr/bin/docker pull mesosphere/mesos-slave:0.23.0-1.0.ubuntu1404
+ExecStartPre=/usr/bin/docker pull ${REPOSITORY}
 
 # Test whether the zookeeper is up.
 ExecStartPre=/bin/sh -c "curl -s $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper?tag=zk | jq -r -e .[0].ServiceAddress"
@@ -30,8 +31,6 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
         --volume /var/run/docker.sock:/var/run/docker.sock \
         --volume /sys:/sys \
         --volume /cgroup:/cgroup \
-        --volume /usr/bin/docker:/usr/bin/docker \
-        --volume /lib/libdevmapper.so.1.02:/lib/x86_64-linux-gnu/libdevmapper.so.1.02 \
         --volume /dev/log:/dev/log \
         --env SERVICE_NAME=mesos-slave \
         --env SERVICE_TAGS=http \
@@ -41,7 +40,7 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
         --env MESOS_ISOLATOR=cgroups/cpu,cgroups/mem \
         --env MESOS_CONTAINERIZERS=docker,mesos \
         --env MESOS_RESOURCES='ports(*):[1024-5050,5052-8299,8303-8399,8401-8499,8501-65535]' \
-        mesosphere/mesos-slave:0.23.0-1.0.ubuntu1404"
+        ${REPOSITORY}"
 
 ExecStop=/usr/bin/docker stop x-%p
 SyslogIdentifier=%p
