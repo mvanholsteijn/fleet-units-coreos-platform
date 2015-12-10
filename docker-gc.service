@@ -1,0 +1,14 @@
+[Unit]
+Description=Docker garbage collect
+After=docker.service
+
+[Service]
+Type=simple
+SyslogIdentifier=%p
+ExecStart=/usr/bin/docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /etc:/etc \
+  spotify/docker-gc
+
+[X-Fleet]
+Global=true
