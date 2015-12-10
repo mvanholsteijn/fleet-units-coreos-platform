@@ -1,0 +1,8 @@
+[Unit]
+Description=run the docker gc every 10 minutes
+
+[Timer]
+OnCalendar=*:0/10
+
+[X-Fleet]
+Global=true
