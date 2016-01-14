@@ -37,6 +37,7 @@ ExecStart=/bin/sh -c "exec /usr/bin/docker run \
         --env MESOS_MASTER=zk://$(curl $COREOS_PRIVATE_IPV4:8500/v1/catalog/service/zookeeper?tag=zk | \
                                  jq -r '.[0] | (.ServiceAddress + \":\" + (.ServicePort | tostring))')/mesos \
         --env MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins \
+        --env MESOS_DOCKER_STOP_TIMEOUT=10secs \
         --env MESOS_ISOLATOR=cgroups/cpu,cgroups/mem \
         --env MESOS_CONTAINERIZERS=docker,mesos \
         --env MESOS_RESOURCES='ports(*):[1024-5050,5052-8299,8303-8399,8401-8499,8501-65535]' \
